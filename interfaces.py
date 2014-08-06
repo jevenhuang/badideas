@@ -14,6 +14,7 @@
     
 #modify by jevnehuang 2014/8/6:
 #Support attributes,add verify method,modify MRO stuff.
+#Inherit interfaces implemented by base classes
 
 import sys
 
@@ -61,7 +62,7 @@ def make_meta_factory(metacls, interfaces):
         real_type = find_real_type(metacls, bases)
         rv = real_type(name, bases, d)
         rv.__interfaces__=collect_interfaces(bases,interfaces)
-        for interface in rv.__interfaces__:
+        for interface in interfaces:
             for member in iter_interface_members(interface):
                 if not implemented(rv, interface, member):
                     raise NotImplementedError('Missing member %r on %r '
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     class Base(object):
         implements(ITest)
         def test(self):
-            pass
+            print 'fff'
         
     class User(Base):
         implements(IRenderable)
@@ -104,11 +105,12 @@ if __name__ == '__main__':
         def render(self):
             return self.username
         
-        def test(self):
-            pass
+        #def test(self):
+            #pass
 
     print User.__bases__
     print User.__interfaces__
+    User().test()
     print 'verify User:',verify(IRenderable,User)
     print 'verify User instance:',verify(IRenderable,User())
     print 'verify Attribute:',verify(IRenderable,Attribute)
