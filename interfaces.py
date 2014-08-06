@@ -61,7 +61,7 @@ def make_meta_factory(metacls, interfaces):
         real_type = find_real_type(metacls, bases)
         rv = real_type(name, bases, d)
         rv.__interfaces__=collect_interfaces(bases,interfaces)
-        for interface in interfaces:
+        for interface in rv.__interfaces__:
             for member in iter_interface_members(interface):
                 if not implemented(rv, interface, member):
                     raise NotImplementedError('Missing member %r on %r '
@@ -103,6 +103,9 @@ if __name__ == '__main__':
         x=1
         def render(self):
             return self.username
+        
+        def test(self):
+            pass
 
     print User.__bases__
     print User.__interfaces__
