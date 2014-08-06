@@ -13,16 +13,9 @@
 import sys
 
 
-class BaseType(type):
-    pass
-
-
-class Base(object):
-    __metaclass__ = BaseType
-
-
-class Interface(object):
+class Interface():
     __slots__ = ()
+    
     
 class Attribute(object):
     __slots__ = ()
@@ -42,6 +35,7 @@ def iter_interface_members(interface):
         if callable(value) or isinstance(value,Attribute):
             yield key
 
+
 def implemented(class_, interface, member):
     if callable(member):
         return getattr(class_, member).im_func \
@@ -53,15 +47,14 @@ def implemented(class_, interface, member):
 def make_meta_factory(metacls, interfaces):
     def __metaclass__(name, bases, d):
         real_type = find_real_type(metacls, bases)
-        bases += interfaces
         rv = real_type(name, bases, d)
+        rv.__interfaces__=interfaces
         for interface in interfaces:
             for member in iter_interface_members(interface):
                 if not implemented(rv, interface, member):
                     raise NotImplementedError('Missing member %r on %r '
                         'from interface %r' % (member, rv.__name__,
                                                interface.__name__))
-                
         return rv
     return __metaclass__
 
@@ -73,19 +66,25 @@ def implements(*interfaces):
     metafactory = make_meta_factory(metacls, interfaces)
     cls_scope['__metaclass__'] = metafactory
 
-
+def verify(interface,target):
+    _interfaces=getattr(target,'__interfaces__',[])
+    return interface in _interfaces
+        
+    
 if __name__ == '__main__':
     class IRenderable(Interface):
         x=Attribute()
         def render(self):
             raise NotImplementedError()
 
-
-    class User(Base):
+    class User(object):
         implements(IRenderable)
-        
         x=1
         def render(self):
             return self.username
 
     print User.__bases__
+    print IRenderable in User.__bases__
+    print 'verify User:',verify(IRenderable,User)
+    print 'verify User instance:',verify(IRenderable,User())
+    print 'verify Attribute:',verify(IRenderable,Attribute)
