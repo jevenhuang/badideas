@@ -9,7 +9,12 @@
 
     :copyright: (c) Copyright 2011 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
+    
 """
+    
+#modify by jevnehuang 2014/8/6:
+#Support attributes,add verify method,modify MRO stuff.
+
 import sys
 
 
@@ -43,12 +48,19 @@ def implemented(class_, interface, member):
     else:
         return member in class_.__dict__
 
-
+def collect_interfaces(bases,interfaces):
+    _interfaces=set()
+    for base in bases:
+        temp=getattr(base,'__interfaces__',[])
+        _interfaces=_interfaces.union(set(temp))
+    _interfaces=_interfaces.union(interfaces)
+    return _interfaces
+    
 def make_meta_factory(metacls, interfaces):
     def __metaclass__(name, bases, d):
         real_type = find_real_type(metacls, bases)
         rv = real_type(name, bases, d)
-        rv.__interfaces__=interfaces
+        rv.__interfaces__=collect_interfaces(bases,interfaces)
         for interface in interfaces:
             for member in iter_interface_members(interface):
                 if not implemented(rv, interface, member):
@@ -76,15 +88,25 @@ if __name__ == '__main__':
         x=Attribute()
         def render(self):
             raise NotImplementedError()
-
-    class User(object):
+    
+    class ITest(Interface):
+        def test(self):
+            """test"""
+        
+    class Base(object):
+        implements(ITest)
+        def test(self):
+            pass
+        
+    class User(Base):
         implements(IRenderable)
         x=1
         def render(self):
             return self.username
 
     print User.__bases__
-    print IRenderable in User.__bases__
+    print User.__interfaces__
     print 'verify User:',verify(IRenderable,User)
     print 'verify User instance:',verify(IRenderable,User())
     print 'verify Attribute:',verify(IRenderable,Attribute)
+    print 'verify interface of base:',verify(ITest,User)
