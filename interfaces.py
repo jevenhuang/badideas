@@ -23,6 +23,9 @@ class Base(object):
 
 class Interface(object):
     __slots__ = ()
+    
+class Attribute(object):
+    __slots__ = ()
 
 
 def find_real_type(explicit, bases):
@@ -34,15 +37,17 @@ def find_real_type(explicit, bases):
     return type
 
 
-def iter_interface_methods(interface):
+def iter_interface_members(interface):
     for key, value in interface.__dict__.iteritems():
-        if callable(value):
+        if callable(value) or isinstance(value,Attribute):
             yield key
 
-
-def implemented(class_, interface, method):
-    return getattr(class_, method).im_func \
-        is not getattr(interface, method).im_func
+def implemented(class_, interface, member):
+    if callable(member):
+        return getattr(class_, member).im_func \
+            is not getattr(interface, member).im_func
+    else:
+        return member in class_.__dict__
 
 
 def make_meta_factory(metacls, interfaces):
@@ -51,17 +56,19 @@ def make_meta_factory(metacls, interfaces):
         bases += interfaces
         rv = real_type(name, bases, d)
         for interface in interfaces:
-            for method in iter_interface_methods(interface):
-                if not implemented(rv, interface, method):
-                    raise NotImplementedError('Missing method %r on %r '
-                        'from interface %r' % (method, rv.__name__,
+            for member in iter_interface_members(interface):
+                if not implemented(rv, interface, member):
+                    raise NotImplementedError('Missing member %r on %r '
+                        'from interface %r' % (member, rv.__name__,
                                                interface.__name__))
+                
         return rv
     return __metaclass__
 
 
 def implements(*interfaces):
     cls_scope = sys._getframe(1).f_locals
+    print cls_scope
     metacls = cls_scope.get('__metaclass__')
     metafactory = make_meta_factory(metacls, interfaces)
     cls_scope['__metaclass__'] = metafactory
@@ -69,14 +76,15 @@ def implements(*interfaces):
 
 if __name__ == '__main__':
     class IRenderable(Interface):
-
+        x=Attribute()
         def render(self):
             raise NotImplementedError()
 
 
     class User(Base):
         implements(IRenderable)
-
+        
+        x=1
         def render(self):
             return self.username
 
